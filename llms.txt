@@ -1,0 +1,44 @@
+# OIP — Open Ingestion Protocol
+
+> A vendor-neutral spec for tools that ingest source material (PDFs, audio,
+> code, web) and produce structured, source-grounded knowledge any
+> OIP-aware consumer can read. v0.1 (draft).
+
+## What this is
+
+OIP is a small contract a producer satisfies to be discoverable + readable
+by any OIP consumer. Producers don't import consumers; consumers don't
+import producers; they meet at a documented on-disk layout + a manifest
++ a small MCP tool surface.
+
+## For LLM agents implementing an OIP producer
+
+Read these files in order:
+
+1. [SPEC.md](./SPEC.md) — full protocol (RFC-style, ~250 lines). MUST/SHOULD/MAY conformance.
+2. [CHECKLIST.md](./CHECKLIST.md) — go/no-go acceptance list for an implementation.
+3. [examples/transcriber.json](./examples/transcriber.json) — complete worked example.
+4. [schemas/manifest.json](./schemas/manifest.json), [schemas/document.json](./schemas/document.json), [schemas/region.json](./schemas/region.json) — JSON Schemas for validation.
+
+## Tooling
+
+```
+uvx oip-for-agents spec            → full SPEC.md
+uvx oip-for-agents validate <dir>  → check a producer's output
+uvx oip-for-agents new <name>      → scaffold a producer starter
+```
+
+## Reference implementations
+
+- Producer: PDF medallion pipeline + FMU inspector — github.com/Novia-RDI-Seafaring/anchor-kb-ui-RAG (v2/)
+- Consumer: Anchor canvas — same repo
+
+## Conformance summary (the SHOULD-cares)
+
+- Producer writes `manifest.json` at root, `artefacts/<slug>/{document.json,regions.json,content/}` per ingested doc.
+- Manifest declares `source_kinds`, `region_kinds`, `source_ref_kinds`, and an `mcp-stdio` invocation with a `tools_namespace`.
+- Producer's MCP server exposes `<ns>.{ingest,list_documents,get_document,get_regions,get_region_content}`.
+- Producer's installer drops the manifest into `${XDG_CONFIG_HOME:-~/.config}/oip/producers.d/<name>.json`.
+- Source-ref kinds are namespaced when domain-specific (`mytool-frame`, not `frame`).
+
+That's the whole contract. Read SPEC.md for the rules.

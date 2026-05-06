@@ -1,0 +1,71 @@
+{
+  "_description": "A complete worked example — what an OIP producer's data dir looks like after one ingestion. The transcriber example.",
+  "data_dir": "/Users/me/transcripts",
+  "files": {
+    "manifest.json": {
+      "oip_version": "0.1",
+      "producer": {
+        "name": "transcriber",
+        "display_name": "Audio/Video Transcriber",
+        "version": "0.1.0",
+        "homepage": "https://github.com/you/transcriber"
+      },
+      "data_dir": "/Users/me/transcripts",
+      "produces": {
+        "source_kinds": ["audio/wav", "audio/mpeg", "video/mp4"],
+        "region_kinds": ["transcript_segment"],
+        "source_ref_kinds": ["audio-timestamp"]
+      },
+      "invocation": {
+        "kind": "mcp-stdio",
+        "command": "transcriber-mcp",
+        "args": ["--data-dir", "/Users/me/transcripts"],
+        "tools_namespace": "transcribe"
+      },
+      "ui_hints": {
+        "node_types": [
+          {
+            "name": "transcribe:segment",
+            "renders": "card with speaker label, timestamp range, inline text + audio scrub"
+          }
+        ],
+        "source_ref_handlers": {
+          "audio-timestamp": "play the audio from start_ms to end_ms"
+        }
+      }
+    },
+    "artefacts/interview/document.json": {
+      "slug": "interview",
+      "title": "Interview — 2026-01-15",
+      "source_kind": "audio/mpeg",
+      "source_path": "sources/interview/interview.mp3",
+      "source_url": null,
+      "ingested_at": "2026-05-06T12:34:00Z",
+      "ingested_by": "transcriber/0.1.0",
+      "size_units": {"duration_ms": 600000},
+      "tags": [],
+      "extras": {"speaker_count": 2}
+    },
+    "artefacts/interview/regions.json": [
+      {
+        "id": "interview:t00003500-00009200",
+        "kind": "transcript_segment",
+        "title": "I think the key insight is that we don't…",
+        "description": "I think the key insight is that we don't actually need a separate database for this; everything we need is already in the events log.",
+        "source_ref": {
+          "kind": "audio-timestamp",
+          "source_url": "sources/interview/interview.mp3",
+          "start_ms": 3500,
+          "end_ms": 9200,
+          "speaker": "Jane"
+        },
+        "content": {
+          "text": "content/interview_t00003500-00009200.txt",
+          "markdown": "content/interview_t00003500-00009200.md"
+        },
+        "tags": [],
+        "entities": ["speaker:jane", "mentions:database", "mentions:events-log"]
+      }
+    ]
+  }
+}

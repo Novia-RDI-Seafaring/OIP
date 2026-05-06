@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oip-for-agents/schemas/region.json",
+  "title": "OIP region",
+  "description": "One addressable region inside a document's regions.json array.",
+  "type": "object",
+  "required": ["id", "kind", "source_ref"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Globally unique within this producer's data dir. Convention: <slug>:<address-suffix>."
+    },
+    "kind": {
+      "type": "string",
+      "description": "Producer-defined region classification (must appear in manifest.produces.region_kinds)."
+    },
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "source_ref": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Source-ref kind (must appear in manifest.produces.source_ref_kinds)."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Pointer back to where in the source this region came from. Address fields depend on kind."
+    },
+    "content": {
+      "type": "object",
+      "description": "Paths to content representations, relative to artefacts/<slug>/.",
+      "properties": {
+        "text": {"type": "string"},
+        "markdown": {"type": "string"},
+        "html": {"type": "string"},
+        "image": {"type": "string"},
+        "png": {"type": "string"},
+        "svg": {"type": "string"},
+        "pdf": {"type": "string"},
+        "audio_clip": {"type": ["string", "null"]},
+        "data": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "entities": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

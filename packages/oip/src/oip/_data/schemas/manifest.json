@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oip-for-agents/schemas/manifest.json",
+  "title": "OIP manifest.json",
+  "description": "The advertisement an OIP producer writes at the root of its data directory.",
+  "type": "object",
+  "required": ["oip_version", "producer", "data_dir", "produces", "invocation"],
+  "properties": {
+    "oip_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "OIP version this producer targets (semver MAJOR.MINOR)."
+    },
+    "producer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Lowercase, alphanumeric + hyphens. Used as the registration filename."
+        },
+        "display_name": {"type": "string"},
+        "version": {"type": "string"},
+        "homepage": {"type": "string", "format": "uri"}
+      },
+      "additionalProperties": false
+    },
+    "data_dir": {
+      "type": "string",
+      "description": "Absolute path to this producer's data directory."
+    },
+    "produces": {
+      "type": "object",
+      "required": ["source_kinds", "region_kinds", "source_ref_kinds"],
+      "properties": {
+        "source_kinds": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "MIME types this producer can ingest."
+        },
+        "region_kinds": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Region.kind values this producer emits."
+        },
+        "source_ref_kinds": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "source_ref.kind values this producer emits."
+        }
+      },
+      "additionalProperties": false
+    },
+    "invocation": {
+      "type": "object",
+      "required": ["kind", "command", "tools_namespace"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["mcp-stdio"]},
+        "command": {"type": "string"},
+        "args": {"type": "array", "items": {"type": "string"}},
+        "tools_namespace": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Tool-name prefix (e.g. 'pdf' → tools 'pdf.ingest')."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ui_hints": {
+      "type": "object",
+      "properties": {
+        "node_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {"type": "string"},
+              "renders": {"type": "string"}
+            }
+          }
+        },
+        "edge_styles": {"type": "object"},
+        "source_ref_handlers": {"type": "object"}
+      }
+    }
+  },
+  "additionalProperties": false
+}

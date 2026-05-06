@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oip-for-agents/schemas/document.json",
+  "title": "OIP document.json",
+  "description": "Per-document metadata at <data-dir>/artefacts/<slug>/document.json.",
+  "type": "object",
+  "required": ["slug", "title", "source_kind", "ingested_at", "ingested_by", "size_units"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this ingested document."
+    },
+    "title": {"type": "string"},
+    "source_kind": {
+      "type": "string",
+      "description": "MIME type of the original input."
+    },
+    "source_path": {
+      "type": ["string", "null"],
+      "description": "Path to the source, relative to data-dir. Null if not retained."
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "description": "Original URL the source came from. Null for local files."
+    },
+    "ingested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp."
+    },
+    "ingested_by": {
+      "type": "string",
+      "description": "Producer identifier and version (e.g. 'transcriber/0.1.0')."
+    },
+    "size_units": {
+      "type": "object",
+      "description": "Free-form size metadata. Conventional keys: page_count, duration_ms, loc_count, byte_count.",
+      "additionalProperties": {"type": ["integer", "number"]}
+    },
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "extras": {"type": "object"}
+  },
+  "additionalProperties": false
+}

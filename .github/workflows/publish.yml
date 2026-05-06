@@ -1,0 +1,52 @@
+name: Publish to PyPI
+
+# Triggered when you create a GitHub release or push a tag matching v*.*.*
+# Requires:
+#   - A trusted publisher set up at https://pypi.org/manage/account/publishing/
+#     pointing at this repo's `publish-pypi` environment, OR
+#   - A `PYPI_API_TOKEN` repo secret.
+#
+# Recommended: use the trusted-publisher path (no token rotation).
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Build sdist + wheel
+        working-directory: packages/oip
+        run: uv build
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: packages/oip/dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: publish-pypi
+      url: https://pypi.org/p/oip
+    permissions:
+      id-token: write   # required for PyPI trusted publishing (no token needed)
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
