@@ -18,7 +18,11 @@ def test_version_prints_both_versions():
     assert result.exit_code == 0
     assert "oip" in result.output
     assert "oip_version" in result.output
-    assert "0.1" in result.output
+    # The CLI prints the OIP_VERSION constant; bumped to 0.2 with the
+    # agent-block addition. Just assert the constant is present so the
+    # test doesn't churn on every minor bump.
+    from oip import OIP_VERSION
+    assert OIP_VERSION in result.output
 
 
 def test_spec_emits_markdown():
