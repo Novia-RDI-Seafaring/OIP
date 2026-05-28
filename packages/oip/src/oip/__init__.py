@@ -9,5 +9,5 @@ Usage from anywhere via `uv`:
     uvx oip schema manifest
     uvx oip validate ./my-data-dir
 """
-__version__ = "0.1.0"
-OIP_VERSION = "0.1"
+__version__ = "0.2.0"
+OIP_VERSION = "0.2"

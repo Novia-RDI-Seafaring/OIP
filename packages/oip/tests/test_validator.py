@@ -136,3 +136,65 @@ def test_no_artefacts_yet_is_warning_not_error(tmp_path):
     errors, warnings = validate_data_dir(tmp_path)
     assert errors == []
     assert any("no artefacts" in w.lower() for w in warnings)
+
+
+def test_agent_block_skill_path_validates(tmp_path):
+    """A manifest with agent.skill_path passes schema validation (0.2 addition)."""
+    manifest = {
+        "oip_version": "0.2",
+        "producer": {"name": "x", "version": "1"},
+        "data_dir": str(tmp_path),
+        "produces": {"source_kinds": [], "region_kinds": [], "source_ref_kinds": []},
+        "invocation": {"kind": "mcp-stdio", "command": "x", "tools_namespace": "x"},
+        "agent": {"skill_path": "skills/skill.md"},
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    errors, _ = validate_data_dir(tmp_path)
+    # No errors about the agent block.
+    assert not any("agent" in e for e in errors), errors
+
+
+def test_agent_block_inline_skill_validates(tmp_path):
+    """Inline agent.skill is the alternative to skill_path."""
+    manifest = {
+        "oip_version": "0.2",
+        "producer": {"name": "x", "version": "1"},
+        "data_dir": str(tmp_path),
+        "produces": {"source_kinds": [], "region_kinds": [], "source_ref_kinds": []},
+        "invocation": {"kind": "mcp-stdio", "command": "x", "tools_namespace": "x"},
+        "agent": {"skill": "## x\n\nUse this when...\n"},
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    errors, _ = validate_data_dir(tmp_path)
+    assert not any("agent" in e for e in errors), errors
+
+
+def test_agent_block_rejects_both_skill_and_skill_path(tmp_path):
+    """Mutually exclusive: providing both skill and skill_path is an error."""
+    manifest = {
+        "oip_version": "0.2",
+        "producer": {"name": "x", "version": "1"},
+        "data_dir": str(tmp_path),
+        "produces": {"source_kinds": [], "region_kinds": [], "source_ref_kinds": []},
+        "invocation": {"kind": "mcp-stdio", "command": "x", "tools_namespace": "x"},
+        "agent": {"skill": "inline", "skill_path": "skills/skill.md"},
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    errors, _ = validate_data_dir(tmp_path)
+    assert any("agent" in e or "oneOf" in e.lower() for e in errors), errors
+
+
+def test_agent_block_empty_is_allowed(tmp_path):
+    """An empty agent block is allowed; the producer simply contributes nothing."""
+    manifest = {
+        "oip_version": "0.2",
+        "producer": {"name": "x", "version": "1"},
+        "data_dir": str(tmp_path),
+        "produces": {"source_kinds": [], "region_kinds": [], "source_ref_kinds": []},
+        "invocation": {"kind": "mcp-stdio", "command": "x", "tools_namespace": "x"},
+        "agent": {},
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    errors, _ = validate_data_dir(tmp_path)
+    assert not any("agent" in e for e in errors), errors
+
