@@ -1,0 +1,118 @@
+# Release workflow — build the ``oip`` wheel + sdist and publish to PyPI
+# when a semver tag is pushed.
+#
+# Trigger: pushing a tag matching ``v*`` (e.g. ``git tag v0.2.1 && git push --tags``).
+# The workflow does NOT trigger on a plain ``main`` push — that would
+# accidentally publish every merge. Tag-driven releases are the single
+# source of truth.
+#
+# Authentication: PyPI trusted publishing (OIDC). No API token in the
+# repo, in GitHub secrets, or on maintainer laptops. To enable for the
+# first release:
+#   1. Reserve the project name on PyPI by manually uploading the first
+#      version from your laptop (see PUBLISHING.md). PyPI requires the
+#      project to already exist before trusted publishing can be wired.
+#   2. On PyPI: project → Settings → Publishing → add a trusted publisher
+#      pointing at:
+#        owner:           Novia-RDI-Seafaring
+#        repository:      OIP
+#        workflow:        release.yml
+#        environment:     pypi
+#   3. After that, this workflow runs hands-off on every tag.
+#
+# Defence-in-depth (configure once in the GitHub UI, see PUBLISHING.md):
+#   - Settings → Environments → ``pypi`` → required reviewers (1-2 humans)
+#   - Same screen → wait timer 10 minutes (gives you time to notice + revoke
+#     an unauthorised tag before the publish job actually runs)
+#   - Settings → Environments → ``pypi`` → deployment branches and tags:
+#     restrict to ``main`` + tags matching ``v*``
+#   - Settings → Tags → tag protection rule: only admins can push ``v*``
+#   - All maintainer GitHub + PyPI accounts use hardware 2FA
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write          # needed to create a GitHub release
+  id-token: write          # needed for PyPI trusted publishing
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: pypi      # protect with required reviewers + wait timer
+
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      # ── Re-run the package's own tests on the exact tagged commit
+      #    before we ship it. CI on main being green is necessary but
+      #    not sufficient; the tag could (deliberately or otherwise)
+      #    point at a different commit than what CI last saw.
+      - name: Sync Python deps (frozen)
+        working-directory: packages/oip
+        run: uv sync --extra dev --frozen
+
+      - name: Run pytest
+        working-directory: packages/oip
+        run: uv run --extra dev pytest -q
+
+      # ── Lockstep guard. SPEC.md / CHECKLIST.md / schemas/ must equal
+      #    the bundled copy under packages/oip/src/oip/_data/. Catches the
+      #    "tagged a release where the toolkit lies about the spec" bug.
+      - name: Bundled _data/ mirrors the tracked files
+        run: |
+          set -e
+          diff -u SPEC.md packages/oip/src/oip/_data/spec.md
+          diff -u CHECKLIST.md packages/oip/src/oip/_data/checklist.md
+          for f in schemas/*.json; do
+            diff -u "$f" "packages/oip/src/oip/_data/$f"
+          done
+
+      - name: Build the wheel + sdist
+        working-directory: packages/oip
+        run: uv build
+
+      # ── Publish to PyPI via trusted publishing. ``packages-dir`` points
+      #    at the package's own dist/ — the package lives nested under
+      #    packages/oip/, not at the repo root.
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/oip/dist/
+
+      # ── Attach the wheel + sdist to a GitHub Release with auto-
+      #    generated notes. Users who pin via download URL get the
+      #    same artefacts PyPI gets.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/oip/dist/*
+          generate_release_notes: true
+          body: |
+            Install:
+
+            ```bash
+            uv tool install oip
+            oip --help
+            ```
+
+            See [`CHANGELOG.md`](./CHANGELOG.md) for the full diff.

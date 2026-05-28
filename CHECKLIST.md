@@ -49,7 +49,7 @@ is OIP 0.1 compliant.
 
 ## Validation passes
 
-- [ ] `oip-for-agents validate <your-data-dir>` reports no errors.
+- [ ] `oip validate <your-data-dir>` reports no errors.
 - [ ] At least one document has been ingested and validates.
 - [ ] At least one region per document validates.
 - [ ] The MCP server starts cleanly: `your-tool-mcp --data-dir <dir>` runs
@@ -70,7 +70,7 @@ is OIP 0.1 compliant.
 - [ ] `ui_hints.source_ref_handlers` describes how to dispatch each of
       your `source_ref.kind` values to a UI behaviour.
 - [ ] Your README has a one-paragraph "Anchor / OIP" section pointing
-      readers at `oip-for-agents` for the spec.
+      readers at `oip` for the spec.
 - [ ] Your tests include at least one round-trip: ingest → write →
       validate.
 

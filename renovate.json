@@ -1,0 +1,111 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  "//": [
+    "Renovate configuration for the OIP repo.",
+    "",
+    "Single most important setting: minimumReleaseAge. We refuse to even",
+    "OPEN a PR for a dependency upgrade until the upstream release is at",
+    "least N days old. This is the cooldown that catches supply-chain",
+    "attacks like the npm shai-hulud worm, the Ultralytics PyPI compromise,",
+    "and the various LangChain/MCP typosquats — those bad versions are",
+    "almost always yanked within 48-72h, so a 7-day floor means we",
+    "simply never adopt them.",
+    "",
+    "Per-category overrides below tighten or loosen this depending on",
+    "blast radius: runtime deps (7d), dev/test tools (3d, less risky),",
+    "GitHub Actions (14d, CI compromise is high-impact), majors (30d,",
+    "always require human review).",
+    "",
+    "OIP has a tiny runtime dep surface: typer + jsonschema. The",
+    "package rules below are scoped accordingly — no React/Vite/Tailwind",
+    "/FastAPI/Pydantic rules because none of those are dependencies.",
+    "",
+    "Renovate is run as a GitHub App (https://github.com/apps/renovate).",
+    "Enable it on the repo via the GitHub UI; no token needed in the repo."
+  ],
+
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    ":maintainLockFilesWeekly",
+    "group:monorepos",
+    "group:recommended"
+  ],
+
+  "minimumReleaseAge": "7 days",
+
+  "schedule": [
+    "before 6am every weekday",
+    "every weekend"
+  ],
+
+  "prHourlyLimit": 3,
+  "prConcurrentLimit": 8,
+  "rebaseWhen": "conflicted",
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on sunday"],
+    "commitMessageAction": "lockfile",
+    "commitMessageTopic": "lockfile maintenance"
+  },
+
+  "vulnerabilityAlerts": {
+    "//": "Security fixes bypass the cooldown — if there's a known CVE we want the patch ASAP. Renovate still verifies the fix version isn't itself the compromised one (it checks the advisory).",
+    "minimumReleaseAge": "0 days",
+    "labels": ["security"],
+    "prPriority": 10
+  },
+
+  "packageRules": [
+    {
+      "//": "Dev / test tools: shorter cooldown. Pytest/ruff don't run on user machines, so a compromise here is bounded to CI + our laptops. 3 days is still enough to catch the typical bad-publish-then-yank cycle.",
+      "matchDepTypes": ["devDependencies"],
+      "minimumReleaseAge": "3 days"
+    },
+
+    {
+      "//": "GitHub Actions: longer cooldown. A compromised Action runs with our CI's permissions, can write to checked-out trees, and (in release.yml) is the thing PyPI's OIDC trusts. 14 days is conservative on purpose.",
+      "matchManagers": ["github-actions"],
+      "minimumReleaseAge": "14 days"
+    },
+
+    {
+      "//": "Major version bumps: always 30 days minimum + manual review. Majors often carry breaking changes that take weeks for the community to triage; we don't want to be on the bleeding edge.",
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "30 days",
+      "automerge": false,
+      "labels": ["major-bump"]
+    },
+
+    {
+      "//": "Patch + minor bumps for dev deps: auto-merge after CI passes. Saves human attention for what matters. Runtime deps stay manual.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+
+    {
+      "//": "Group jsonschema + its co-released specs package. The validator imports both; they bump together upstream.",
+      "matchPackageNames": ["jsonschema", "jsonschema-specifications", "referencing"],
+      "groupName": "jsonschema stack"
+    },
+
+    {
+      "//": "Pin Python to 3.10 as the floor (matches pyproject.toml requires-python). Renovate's default is to chase the latest, which would risk breaking the wheel's classifiers.",
+      "matchPackageNames": ["python"],
+      "enabled": false
+    }
+  ],
+
+  "python": {
+    "//": "uv's lockfile is renovate-compatible since renovate v37. No extra config needed."
+  },
+
+  "labels": ["dependencies"]
+}

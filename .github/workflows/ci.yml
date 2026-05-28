@@ -1,83 +1,159 @@
-name: CI
+# CI — run on every PR + every push to main.
+#
+# OIP is a spec-first repo; the Python package under ``packages/oip/`` is
+# the convenient delivery vehicle. CI therefore has two concerns:
+#
+#   1. Keep the Python toolkit honest — tests pass under the package's own
+#      pyproject.toml with the frozen lockfile.
+#   2. Keep the bundled artefacts in lockstep — the package re-bundles
+#      ``SPEC.md``, ``CHECKLIST.md``, the JSON Schemas, and the worked
+#      example under ``packages/oip/src/oip/_data/``. If those drift,
+#      ``uv run oip validate`` on the worked example catches it.
+#
+# We deliberately use frozen-lockfile installs everywhere: a CI that
+# happily resolves whatever's newest defeats the entire point of having
+# locked dependencies. If the lockfile is out of date, a Renovate PR
+# should be the one to update it, not a side effect of CI.
+
+name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  # Allow manual re-runs from the Actions tab if a transient failure
+  # needs a kick.
+  workflow_dispatch:
+
+# Cancel in-flight runs when a new commit lands on the same branch /
+# PR — saves CI minutes and avoids "the second-to-last run is the
+# canonical green" confusion.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  python:
+    name: python
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Sync deps (frozen)
+        working-directory: packages/oip
+        run: uv sync --extra dev --frozen
+
+      - name: pytest
+        working-directory: packages/oip
+        run: uv run --extra dev pytest -q
+
+      # ruff is configured in packages/oip/pyproject.toml as a dev extra.
+      # Reported findings don't fail the build today; the OIP package is
+      # small enough that the runs above are the real signal. Flip to a
+      # blocking check once we've triaged the existing findings.
+      - name: ruff (advisory)
+        working-directory: packages/oip
+        run: uv run --extra dev ruff check src tests || true
+
+  platform-smoke:
+    name: platform smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-
+        os: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: true
+          version: "latest"
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install dependencies
+      - name: Sync deps from clean checkout
         working-directory: packages/oip
-        run: uv sync --extra dev
+        run: uv sync --extra dev --frozen
 
-      - name: Run tests
+      - name: CLI help smoke test
         working-directory: packages/oip
-        run: uv run pytest -v
+        run: uv run oip --help
 
-      - name: Build wheel
-        working-directory: packages/oip
-        run: uv build
-
-      - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
-        if: matrix.python-version == '3.12'
-        with:
-          name: oip-wheel
-          path: packages/oip/dist/*.whl
-
-  validate-schemas:
+  schemas:
+    name: schemas + bundled data
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate JSON Schemas are valid JSON Schema
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Sync deps (frozen)
+        working-directory: packages/oip
+        run: uv sync --extra dev --frozen
+
+      # Top-level ``schemas/`` is the canonical JSON Schema set. The
+      # bundled copy under ``packages/oip/src/oip/_data/schemas/`` must
+      # mirror it byte-for-byte — drift here is the most common way the
+      # toolkit can lie about the spec.
+      - name: Top-level schemas are valid JSON Schema
         run: |
-          python -c "
-          import json
+          python <<'PY'
+          import json, sys
           from pathlib import Path
-          for f in Path('schemas').glob('*.json'):
+          fail = False
+          for f in sorted(Path('schemas').glob('*.json')):
               data = json.loads(f.read_text())
-              assert '\$schema' in data, f'{f} missing \$schema'
-              assert 'title' in data, f'{f} missing title'
-              print(f'{f.name} ✓')
-          "
+              if '$schema' not in data:
+                  print(f'{f} missing $schema'); fail = True
+              if 'title' not in data:
+                  print(f'{f} missing title'); fail = True
+              print(f'{f.name} ok')
+          sys.exit(1 if fail else 0)
+          PY
 
-  validate-example:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
+      - name: Bundled _data/ mirrors the tracked files
+        run: |
+          set -e
+          diff -u SPEC.md packages/oip/src/oip/_data/spec.md
+          diff -u CHECKLIST.md packages/oip/src/oip/_data/checklist.md
+          for f in schemas/*.json; do
+            diff -u "$f" "packages/oip/src/oip/_data/$f"
+          done
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: Install oip
-        working-directory: packages/oip
-        run: uv sync --extra dev
-
-      - name: Materialize the worked example onto disk and validate it
+      # End-to-end: materialise the worked example onto disk and run
+      # the bundled validator against it. Catches schema/spec drift the
+      # diff above wouldn't surface (e.g. a schema change that contradicts
+      # the example).
+      - name: Validate the worked example with the toolkit
         working-directory: packages/oip
         run: |
-          uv run python -c "
+          uv run python <<'PY'
           import json
           from pathlib import Path
           example = json.loads(Path('../../examples/transcriber.json').read_text())
@@ -87,5 +163,26 @@ jobs:
               full.parent.mkdir(parents=True, exist_ok=True)
               full.write_text(json.dumps(body, indent=2))
           print('materialized at', out)
-          "
+          PY
           uv run oip validate /tmp/oip-example
+
+  supply-chain:
+    name: supply-chain audit
+    runs-on: ubuntu-latest
+    # Dependency Review only fires meaningfully on PRs (it compares the
+    # base ref to the head); on plain pushes we skip it.
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # PR-time guard. Compares the lockfile/manifest diff against the
+      # GitHub Advisory Database. Refuses to land a PR that introduces a
+      # known-vulnerable dep or a disallowed licence. Configured in
+      # .github/dependency-review-config.yml.
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          config-file: ./.github/dependency-review-config.yml
