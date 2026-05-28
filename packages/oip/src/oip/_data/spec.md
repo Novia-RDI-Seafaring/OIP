@@ -1,6 +1,6 @@
-# OIP — Open Ingestion Protocol (v0.1)
+# OIP — Open Ingestion Protocol (v0.2)
 
-**Version:** 0.1 (draft) · **Status:** proposed
+**Version:** 0.2 (draft) · **Status:** proposed
 
 A vendor-neutral specification for **ingestion tools that produce structured, source-grounded knowledge**. Any tool that conforms to OIP can be consumed by any OIP-aware application — the same way any LSP-compliant language server works in any LSP-aware editor.
 
@@ -61,7 +61,7 @@ A producer **MUST** write this file at the root of its data directory.
 
 ```json
 {
-  "oip_version": "0.1",
+  "oip_version": "0.2",
   "producer": {
     "name": "your-tool-name",
     "display_name": "Human-Readable Name",
@@ -88,6 +88,10 @@ A producer **MUST** write this file at the root of its data directory.
     "source_ref_handlers": {
       "audio-timestamp": "open the audio at start_ms"
     }
+  },
+  "agent": {
+    "skill_path": "skills/skill.md",
+    "tool_skills_dir": "skills/tools/"
   }
 }
 ```
@@ -100,6 +104,8 @@ A producer **MUST** write this file at the root of its data directory.
 - `produces.source_ref_kinds` declares every `source_ref.kind` value the producer's regions will use.
 - `invocation.tools_namespace` is the prefix the producer's MCP tools are registered under. **MUST** be unique among installed producers.
 - `invocation.command` is the binary name a consumer will spawn. **SHOULD** be on the user's PATH after install.
+- `ui_hints` are advisory hints for OIP-aware *visual* consumers (canvases, viewers).
+- `agent` (new in 0.2) is the parallel block for OIP-aware *agent* consumers — narrative skill content explaining *when* an agent should invoke this producer and *how* to chain its tools. Optional; producers without it just don't appear in the consumer's composed agent briefing. See section 9.
 
 ---
 
@@ -224,6 +230,7 @@ You **MUST**:
 You **SHOULD**:
 
 - [ ] Provide `ui_hints` for OIP-aware UIs.
+- [ ] Provide an `agent` block for OIP-aware agent consumers (see section 9).
 - [ ] Make `<slug>` derivation deterministic.
 - [ ] Emit at least `text` or `markdown` content for textual regions.
 - [ ] Add a `--data-dir` flag to your MCP server.
@@ -235,17 +242,93 @@ You **MAY**:
 
 ---
 
-## 9. What OIP doesn't specify
+## 9. `agent` — narrative skills for AI consumers
+
+**New in 0.2.** Optional. The agent-side dual of `ui_hints`: a way for a
+producer to ship the natural-language guidance an AI consumer needs to
+know *when* to invoke this producer's tools and *how* to chain them. A
+consumer composing an agent briefing (e.g. a SKILL.md for Claude Code, an
+`instructions` field for an MCP server) MAY concatenate the `agent` block
+of every registered producer.
+
+### Shape
+
+The `agent` block is an object on `manifest.json`:
+
+```json
+{
+  "agent": {
+    "skill_path": "skills/skill.md",
+    "tool_skills_dir": "skills/tools/"
+  }
+}
+```
+
+Or, for small producers who'd rather inline:
+
+```json
+{
+  "agent": {
+    "skill": "## `your-tool` — what it does\n\nUse this when...\n"
+  }
+}
+```
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `skill_path` | one of (skill_path, skill) | Filesystem path to a markdown file, relative to the manifest's directory. |
+| `skill` | one of | Inline markdown string. Mutually exclusive with `skill_path`. |
+| `tool_skills_dir` | no | Directory containing one `.md` per tool, relative to the manifest. Reserved for tool-level skills; consumers MAY ignore this in 0.2. |
+
+A consumer **SHOULD** treat `skill_path` and `skill` as mutually
+exclusive. If both are present, `skill_path` wins.
+
+### What goes in the skill content
+
+OIP itself doesn't dictate the prose style — different consumers will
+have different conventions (length caps, voice, anti-patterns). The
+following is a recommended baseline that every consumer will accept:
+
+- A top-level heading (`##`) naming the producer
+- One short paragraph describing when an agent would invoke it
+- A `### Tools` subsection listing the producer's MCP tools (one line each)
+- A `### Typical situation` paragraph describing the shape of the
+  situation, **not** an enumerated step-by-step procedure
+- A `### Common errors` subsection (optional)
+
+The producer **SHOULD NOT** assume any particular UI for the composed
+result. Consumers may render it as plaintext, markdown, or wrap it in
+their own structure.
+
+### Length and tone guidance (informative, not normative)
+
+Consumers MAY enforce stricter content rules (length caps, "no numbered
+procedural lists," etc.). Producers SHOULD keep the `skill` content
+short — the goal is to brief an agent on situation and tools, not to
+write a reference manual. Tooling that composes multiple producers' skill
+blocks works best when each contribution is on the order of 150-400 words.
+
+### Versioning
+
+The `agent` block schema rides on `oip_version`. Consumers reading a
+manifest with `oip_version: "0.2"` or later MAY read the `agent` block;
+consumers reading older manifests MUST treat the field as absent.
+
+---
+
+## 10. What OIP doesn't specify
 
 - Embeddings or search indexes — out of scope.
 - Authentication — local-first by default.
 - Rendering — `ui_hints` is advisory.
 - Transports beyond MCP — 0.1 only specifies `mcp-stdio`.
 - Provenance verification — consumer's responsibility.
+- Agent-side content style — `agent.skill` content is producer-authored;
+  consumers may enforce stricter rules.
 
 ---
 
-## 10. Versioning
+## 11. Versioning
 
 `oip_version` follows semver. Backwards-incompatible changes bump the major. Consumers MUST refuse manifests whose major exceeds theirs; SHOULD read older minors.
 

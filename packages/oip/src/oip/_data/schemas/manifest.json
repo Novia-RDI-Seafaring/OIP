@@ -84,6 +84,30 @@
         "edge_styles": {"type": "object"},
         "source_ref_handlers": {"type": "object"}
       }
+    },
+    "agent": {
+      "type": "object",
+      "description": "Narrative skill content for AI consumers — the agent-side dual of ui_hints. Optional. Introduced in OIP 0.2.",
+      "properties": {
+        "skill_path": {
+          "type": "string",
+          "description": "Filesystem path to a markdown file containing the skill content, relative to manifest.json's directory."
+        },
+        "skill": {
+          "type": "string",
+          "description": "Inline markdown skill content. Mutually exclusive with skill_path."
+        },
+        "tool_skills_dir": {
+          "type": "string",
+          "description": "Directory containing per-tool skill files, one .md per tool, relative to manifest.json's directory. Reserved for tool-level skills; consumers may ignore this in 0.2."
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {"required": ["skill_path"], "not": {"required": ["skill"]}},
+        {"required": ["skill"], "not": {"required": ["skill_path"]}},
+        {"not": {"anyOf": [{"required": ["skill"]}, {"required": ["skill_path"]}]}}
+      ]
     }
   },
   "additionalProperties": false

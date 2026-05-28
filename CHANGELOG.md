@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-28
+
+### Added
+
+- Optional `agent` block on `manifest.json` for OIP-aware **agent**
+  consumers — the narrative dual of `ui_hints`. A producer that ships
+  an `agent` block contributes natural-language skill content
+  describing when an agent should invoke its tools and how to chain
+  them. The block accepts either `skill_path` (relative to the
+  manifest's directory) or `skill` (inline markdown), plus an
+  optional `tool_skills_dir` for per-tool snippets.
+- Section 9 of `SPEC.md` documents the `agent` block, the
+  recommended skill structure, and version-bump semantics.
+- JSON Schema additions in `schemas/manifest.json` and the bundled
+  copy at `packages/oip/src/oip/_data/schemas/manifest.json`.
+- Implementer's checklist updated: SHOULD provide an `agent` block.
+
+### Changed
+
+- `oip_version` bumped to `0.2`. Backwards-compatible: producers with
+  `oip_version: "0.1"` continue to validate against the updated
+  schema.
+
 ## [0.1.0] — 2026-05-06
 
 ### Added
@@ -25,5 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reference implementations: PDF medallion + FMU producers (in
   [Anchor v2](https://github.com/Novia-RDI-Seafaring/anchor-kb-ui-RAG)).
 
-[Unreleased]: https://github.com/Novia-RDI-Seafaring/OIP/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Novia-RDI-Seafaring/OIP/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Novia-RDI-Seafaring/OIP/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Novia-RDI-Seafaring/OIP/releases/tag/v0.1.0
