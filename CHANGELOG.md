@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (0.3 draft — see rfcs/0001)
+
+- `consumes` block on `manifest.json` for **region producers**: tools that
+  derive a new region from an existing one (for example digitizing a chart
+  image into a data series) rather than ingesting a source. Declares the
+  `region_kinds` and `content_kinds` the producer acts on.
+- `derived_from` on regions: the parent region id a derived region came
+  from. The derived region keeps the parent's `source_ref`, so provenance
+  points at the original location.
+- Recognised `renders` tokens convention for `ui_hints` (`chart`, `table`,
+  `card`): a consumer that knows a token and finds matching `content.data`
+  draws it; unknown tokens fall back to title and description. `renders`
+  stays a free string, so 0.2 producers are unaffected.
+- `rfcs/0001-region-producers-and-renderable-content.md` and a worked
+  `examples/graph-tracer.json` (a region producer that derives a
+  `chart_series` from a `chart` region).
+- JSON Schema additions in `schemas/` and the bundled copy under
+  `packages/oip/src/oip/_data/schemas/`. All additive and optional;
+  existing producer output validates unchanged.
+
 ## [0.2.0] — 2026-05-28
 
 ### Added
