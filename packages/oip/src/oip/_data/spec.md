@@ -176,7 +176,7 @@ Every region carries a `source_ref` describing where in the source it came from.
 
 | `kind`                  | Address fields                                           |
 |-------------------------|----------------------------------------------------------|
-| `pdf-page-bbox`         | `page` (int), `bbox` (`[l, t, r, b]`)                    |
+| `pdf-page-bbox`         | `page` (int), `bbox` (`[l, t, r, b]`), `page_size` (`[w, h]`), `coord_origin?` — see below |
 | `audio-timestamp`       | `source_url`, `start_ms`, `end_ms`, `speaker?`           |
 | `video-timestamp`       | `source_url`, `start_ms`, `end_ms`, `track?`             |
 | `code-line-range`       | `path`, `start_line`, `end_line`, `language?`            |
@@ -185,6 +185,24 @@ Every region carries a `source_ref` describing where in the source it came from.
 | `fmu-simulation-time`   | `simulation_id`, `time_seconds`, `variable_name?`        |
 
 Producers **MAY** add new kinds, prefixed by their namespace if domain-specific.
+
+### `pdf-page-bbox` coordinates
+
+A bbox is only meaningful with a declared coordinate system. Producers disagree by default (PDF user space is bottom-left; images, OCR and layout models, and renderers are top-left; some models emit normalised 0–1000 boxes), and a consumer cannot tell them apart from four numbers. So `pdf-page-bbox` fixes one convention:
+
+- **Units:** PDF points (1/72 inch), the page's own user space. Never pixels or normalised units; a producer that works on a raster **MUST** convert using the render scale it used.
+- **Origin:** top-left of the page, y increasing downward. `bbox` is `[left, top, right, bottom]` with `left <= right` and `top <= bottom`.
+- **`page_size`** (`[width, height]`, points) is **REQUIRED**. It lets a consumer validate bounds and convert to any other space without opening the source.
+- **`page`** is 1-based.
+- **`coord_origin`** is OPTIONAL and defaults to `"top-left"`. A producer that natively emits bottom-left (PDF user space) **MAY** write `"bottom-left"` instead of converting; the bbox is then `[left, top, right, bottom]` with y increasing upward (`top >= bottom`). Consumers **MUST** convert on read (`y' = height - y`) and **SHOULD** store top-left. This is a migration escape hatch, not a second convention.
+
+A consumer **MUST** reject or normalise a `pdf-page-bbox` whose values violate the declared convention (wrong y-order, out of page bounds), rather than render it as-is.
+
+Example:
+
+```json
+{"kind": "pdf-page-bbox", "page": 3, "bbox": [56.4, 653.1, 291.0, 783.4], "page_size": [595.3, 841.9]}
+```
 
 ---
 
