@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `pdf-page-bbox` now specifies its coordinate system (§5): PDF points,
+  top-left origin, `[l, t, r, b]` with `top <= bottom`, a required
+  `page_size` `[w, h]`, and an optional `coord_origin` (`"top-left"` default,
+  `"bottom-left"` accepted as a migration escape hatch that consumers convert
+  on read). Previously the kind named the four fields but no units or
+  origin, so producers could disagree without any consumer being able to tell.
+
 ## [0.2.0] — 2026-05-28
 
 ### Added
