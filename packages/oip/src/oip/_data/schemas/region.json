@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Producer-defined region classification (must appear in manifest.produces.region_kinds)."
     },
+    "derived_from": {
+      "type": "string",
+      "description": "Region id this region was derived from, when a region producer enriches an existing region rather than ingesting a source. The derived region's source_ref should resolve to the same original location as its parent. Optional; introduced in OIP 0.3."
+    },
     "title": {"type": "string"},
     "description": {"type": "string"},
     "source_ref": {

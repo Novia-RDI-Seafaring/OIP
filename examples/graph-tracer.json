@@ -1,0 +1,73 @@
+{
+  "_description": "A region producer (OIP 0.3 draft). graph-tracer does not ingest sources. It consumes an existing 'chart' region another producer wrote (a chart image with a png crop) and derives a 'chart_series' region carrying the digitized data. The derived region keeps the parent's source_ref, so a recovered pump curve still points at the page and bbox it came from. Renders as a 'chart'.",
+  "data_dir": "/Users/me/anchor-data",
+  "files": {
+    "manifest.json": {
+      "oip_version": "0.3",
+      "producer": {
+        "name": "graph-tracer",
+        "display_name": "Graph Data Extractor",
+        "version": "0.1.0",
+        "homepage": "https://github.com/NoviaIntSysGroup/graph-data-extractor"
+      },
+      "data_dir": "/Users/me/anchor-data",
+      "produces": {
+        "source_kinds": [],
+        "region_kinds": ["chart_series"],
+        "source_ref_kinds": ["pdf-page-bbox"]
+      },
+      "consumes": {
+        "region_kinds": ["chart"],
+        "content_kinds": ["png"]
+      },
+      "invocation": {
+        "kind": "mcp-stdio",
+        "command": "graph-tracer-mcp",
+        "args": ["--data-dir", "/Users/me/anchor-data"],
+        "tools_namespace": "graphtracer"
+      },
+      "ui_hints": {
+        "node_types": [
+          {"name": "graphtracer:chart_series", "renders": "chart"}
+        ],
+        "source_ref_handlers": {
+          "pdf-page-bbox": "open the PDF at page and highlight bbox"
+        }
+      },
+      "agent": {
+        "skill": "## graph-tracer — digitize a chart region into real data\n\nUse this when a region is a plotted chart (a pump curve, an efficiency map, an NPSH curve) and you want the actual series, not just the image.\n\n### Tools\n- `graphtracer.trace_series(image_path, request)` — trace the lines and return `{axes, series}` with no GUI. Supply two calibration ticks per axis and a few seed waypoints per line, all in pixels.\n- `graphtracer.trace_chart(image_path, analysis)` — open the interactive window for a human to click the points instead.\n\n### Typical situation\nA datasheet was ingested by a PDF producer. One region is `kind: chart` with a png crop. Read the crop, read the axis tick values, place the calibration ticks and seed waypoints, and call `trace_series`. Store the result as a region that keeps the chart's page and bbox; it renders as a chart.\n"
+      }
+    },
+    "artefacts/lkh-pump/regions.json": [
+      {
+        "id": "lkh-pump:p4-chart-series-b",
+        "kind": "chart_series",
+        "derived_from": "lkh-pump:p4-r1",
+        "title": "LKH-85 head vs flow",
+        "description": "Digitized performance curve for LKH-85: head H(m) versus flow Q(m3/h), recovered from the page-4 flow chart.",
+        "source_ref": {
+          "kind": "pdf-page-bbox",
+          "page": 4,
+          "bbox": [56.5, 58.5, 252.8, 236.2],
+          "page_size": [595.3, 841.9]
+        },
+        "content": {
+          "data": {
+            "x_label": "Q (m3/h)",
+            "y_label": "H (m)",
+            "x_scale": "linear",
+            "y_scale": "linear",
+            "series": [
+              {
+                "label": "LKH-85",
+                "points": [[0, 94], [50, 95], [100, 95], [150, 94], [200, 91], [250, 86], [300, 80], [350, 68], [400, 50]]
+              }
+            ]
+          }
+        },
+        "tags": ["pump-curve"],
+        "entities": ["model:LKH-85"]
+      }
+    ]
+  }
+}

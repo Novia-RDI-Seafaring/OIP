@@ -52,6 +52,23 @@
       },
       "additionalProperties": false
     },
+    "consumes": {
+      "type": "object",
+      "description": "Region kinds and content forms this producer derives from. Present on region producers (tools that enrich an existing region rather than ingest a source). Optional; introduced in OIP 0.3.",
+      "properties": {
+        "region_kinds": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Region.kind values this producer can act on."
+        },
+        "content_kinds": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "content keys that must be present on a consumed region (e.g. 'png')."
+        }
+      },
+      "additionalProperties": false
+    },
     "invocation": {
       "type": "object",
       "required": ["kind", "command", "tools_namespace"],
