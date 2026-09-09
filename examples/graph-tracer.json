@@ -35,7 +35,7 @@
         }
       },
       "agent": {
-        "skill": "## graph-tracer — digitize a chart region\n\nUse this when a region is a plotted chart (a pump curve, an efficiency map) and you want the real series, not just the image. Supply two calibration ticks per axis and a few waypoints per line, in pixels; the tool returns the data.\n\n### Tools\n- `graphtracer.trace_chart(slug, region_id, x_ticks, y_ticks, lines, params)` — derive a chart_series region from a chart region.\n\n### Typical situation\nA datasheet was ingested by a PDF producer. One region is `kind: chart` with a png crop. Read the crop, read the axes and tick values, place sparse waypoints on each line, and call trace_chart. The derived region keeps the chart's page and bbox.\n"
+        "skill": "## graph-tracer — digitize a chart region into real data\n\nUse this when a region is a plotted chart (a pump curve, an efficiency map, an NPSH curve) and you want the actual series, not just the image.\n\n### Tools\n- `graphtracer.trace_series(image_path, request)` — trace the lines and return `{axes, series}` with no GUI. Supply two calibration ticks per axis and a few seed waypoints per line, all in pixels.\n- `graphtracer.trace_chart(image_path, analysis)` — open the interactive window for a human to click the points instead.\n\n### Typical situation\nA datasheet was ingested by a PDF producer. One region is `kind: chart` with a png crop. Read the crop, read the axis tick values, place the calibration ticks and seed waypoints, and call `trace_series`. Store the result as a region that keeps the chart's page and bbox; it renders as a chart.\n"
       }
     },
     "artefacts/lkh-pump/regions.json": [
@@ -48,7 +48,8 @@
         "source_ref": {
           "kind": "pdf-page-bbox",
           "page": 4,
-          "bbox": [56.5, 783.4, 252.8, 605.7]
+          "bbox": [56.5, 58.5, 252.8, 236.2],
+          "page_size": [595.3, 841.9]
         },
         "content": {
           "data": {
