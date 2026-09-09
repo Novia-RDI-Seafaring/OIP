@@ -1,6 +1,6 @@
-# OIP — Open Ingestion Protocol (v0.2)
+# OIP — Open Ingestion Protocol (v0.3)
 
-**Version:** 0.2 (draft) · **Status:** proposed
+**Version:** 0.3 (draft) · **Status:** proposed
 
 A vendor-neutral specification for **ingestion tools that produce structured, source-grounded knowledge**. Any tool that conforms to OIP can be consumed by any OIP-aware application — the same way any LSP-compliant language server works in any LSP-aware editor.
 
@@ -21,7 +21,7 @@ A single tool can be both. This document is primarily written for **producer aut
 
 The keywords **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, **MAY** in this document are interpreted as in RFC 2119.
 
-A producer is **OIP 0.1 compliant** if it satisfies every **MUST** below.
+A producer is **OIP compliant** if it satisfies every **MUST** below.
 
 ---
 
@@ -61,7 +61,7 @@ A producer **MUST** write this file at the root of its data directory.
 
 ```json
 {
-  "oip_version": "0.2",
+  "oip_version": "0.3",
   "producer": {
     "name": "your-tool-name",
     "display_name": "Human-Readable Name",
@@ -106,6 +106,21 @@ A producer **MUST** write this file at the root of its data directory.
 - `invocation.command` is the binary name a consumer will spawn. **SHOULD** be on the user's PATH after install.
 - `ui_hints` are advisory hints for OIP-aware *visual* consumers (canvases, viewers).
 - `agent` (new in 0.2) is the parallel block for OIP-aware *agent* consumers — narrative skill content explaining *when* an agent should invoke this producer and *how* to chain its tools. Optional; producers without it just don't appear in the consumer's composed agent briefing. See section 9.
+- `consumes` (new in 0.3) declares the region kinds and content forms a **region producer** acts on — a tool that derives a new region from an existing one (digitizing a chart image into a data series) rather than ingesting a source. A producer with a `consumes` block is a region producer; one with only `produces` is a source producer; a producer MAY be both. See [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md).
+
+### `ui_hints` render dispatch
+
+`ui_hints.node_types[].renders` stays a free string, but a small set of **recognised render tokens** (`chart`, `table`, `card` — see [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md)) names data shapes a consumer can draw without producer-specific code. A producer signals a recognised token by setting `renders` to exactly the token string.
+
+A visual consumer **SHOULD** resolve a node's renderer in this order:
+
+1. an exact registration for the node's `node_type` name (the consumer ships, or was configured with, a renderer for that specific type, e.g. `graphtracer:chart_series`);
+2. the renderer registered under the token the type declares in `renders`;
+3. the consumer's default renderer (typically `title` + `description`).
+
+Recognised tokens are **consumer-side data contracts**: each token fixes the shape of the region's `content.data` that a consumer drawing it may rely on (the `chart` token's payload is specified in [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md)). A token the consumer does not recognise falls through to the default renderer; it **MUST NOT** be treated as an error. This is what keeps a namespaced producer type renderable in a consumer that has never seen the producer: the type misses step 1, its token resolves at step 2, and anything else still shows at step 3.
+
+[Anchor](https://github.com/Novia-RDI-Seafaring/anchor-kb-ui-RAG) is the reference consumer implementation of this resolution order.
 
 ---
 
@@ -165,6 +180,11 @@ A list of addressable regions at `artefacts/<slug>/regions.json`.
 **Required keys per region:** `id`, `kind`, `source_ref`.
 
 `id` **MUST** be globally unique within the producer's data dir. Convention: `<slug>:<address-suffix>`.
+
+Two additions from 0.3 (see [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md)):
+
+- `derived_from` (optional) names the parent region id when a region producer derived this region from an existing one. The derived region's `source_ref` **MUST** resolve to the same original location as the parent's — the simplest rule is to copy it verbatim — so provenance survives derivation. A consumer that does not understand `derived_from` ignores it.
+- `data` as a content kind carries structured JSON inline, as an object on the region, rather than pointing at a file. The region `kind` implies the shape; the recognised render tokens (see the `ui_hints` render dispatch in section 2) each fix one conventional shape so the data is portable across consumers.
 
 ---
 
@@ -339,7 +359,7 @@ consumers reading older manifests MUST treat the field as absent.
 - Embeddings or search indexes — out of scope.
 - Authentication — local-first by default.
 - Rendering — `ui_hints` is advisory.
-- Transports beyond MCP — 0.1 only specifies `mcp-stdio`.
+- Transports beyond MCP — only `mcp-stdio` is specified.
 - Provenance verification — consumer's responsibility.
 - Agent-side content style — `agent.skill` content is producer-authored;
   consumers may enforce stricter rules.
@@ -352,4 +372,4 @@ consumers reading older manifests MUST treat the field as absent.
 
 ---
 
-*Draft 0.1. Stabilises at 1.0 once at least three independent producers and one external consumer are implemented end-to-end.*
+*Draft. Stabilises at 1.0 once at least three independent producers and one external consumer are implemented end-to-end.*
