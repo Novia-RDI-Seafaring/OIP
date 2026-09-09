@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON Schema additions in `schemas/` and the bundled copy under
   `packages/oip/src/oip/_data/schemas/`. All additive and optional;
   existing producer output validates unchanged.
+- Consumer-side `renders` semantics in `SPEC.md` §2 (#6): a consumer
+  SHOULD resolve a node's renderer by exact `node_type` registration,
+  then the type's declared `renders` token, then its default;
+  recognised tokens are consumer-side data contracts and unrecognised
+  tokens fall through to the default renderer, never error.
 
 ### Changed
 

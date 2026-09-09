@@ -108,6 +108,20 @@ A producer **MUST** write this file at the root of its data directory.
 - `agent` (new in 0.2) is the parallel block for OIP-aware *agent* consumers — narrative skill content explaining *when* an agent should invoke this producer and *how* to chain its tools. Optional; producers without it just don't appear in the consumer's composed agent briefing. See section 9.
 - `consumes` (new in 0.3) declares the region kinds and content forms a **region producer** acts on — a tool that derives a new region from an existing one (digitizing a chart image into a data series) rather than ingesting a source. A producer with a `consumes` block is a region producer; one with only `produces` is a source producer; a producer MAY be both. See [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md).
 
+### `ui_hints` render dispatch
+
+`ui_hints.node_types[].renders` stays a free string, but a small set of **recognised render tokens** (`chart`, `table`, `card` — see [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md)) names data shapes a consumer can draw without producer-specific code. A producer signals a recognised token by setting `renders` to exactly the token string.
+
+A visual consumer **SHOULD** resolve a node's renderer in this order:
+
+1. an exact registration for the node's `node_type` name (the consumer ships, or was configured with, a renderer for that specific type, e.g. `graphtracer:chart_series`);
+2. the renderer registered under the token the type declares in `renders`;
+3. the consumer's default renderer (typically `title` + `description`).
+
+Recognised tokens are **consumer-side data contracts**: each token fixes the shape of the region's `content.data` that a consumer drawing it may rely on (the `chart` token's payload is specified in [rfcs/0001](rfcs/0001-region-producers-and-renderable-content.md)). A token the consumer does not recognise falls through to the default renderer; it **MUST NOT** be treated as an error. This is what keeps a namespaced producer type renderable in a consumer that has never seen the producer: the type misses step 1, its token resolves at step 2, and anything else still shows at step 3.
+
+[Anchor](https://github.com/Novia-RDI-Seafaring/anchor-kb-ui-RAG) is the reference consumer implementation of this resolution order.
+
 ---
 
 ## 3. `document.json`
