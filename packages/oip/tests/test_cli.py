@@ -6,6 +6,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from oip import OIP_VERSION, __version__
 from oip.cli import app
 
 
@@ -16,9 +17,24 @@ def _runner():
 def test_version_prints_both_versions():
     result = _runner().invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "oip" in result.output
-    assert "oip_version" in result.output
-    assert "0.1" in result.output
+    assert __version__ in result.output
+    assert f"oip_version    {OIP_VERSION}" in result.output
+
+
+def test_oip_version_comes_from_the_spec():
+    # The bundled spec's title line is the single source of the protocol
+    # version; a hardcoded constant drifting from it is what this guards.
+    result = _runner().invoke(app, ["spec"])
+    title = result.output.split("\n", 1)[0]
+    assert f"(v{OIP_VERSION})" in title
+
+
+def test_bundled_spec_matches_repo_spec():
+    repo_spec = Path(__file__).resolve().parents[3] / "SPEC.md"
+    if not repo_spec.exists():  # running from an sdist, not the repo
+        return
+    bundled = _runner().invoke(app, ["spec"]).output
+    assert bundled.rstrip("\n") == repo_spec.read_text().rstrip("\n")
 
 
 def test_spec_emits_markdown():

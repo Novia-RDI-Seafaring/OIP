@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (0.3 draft — see rfcs/0001)
+## [0.3.0] — 2026-09-09
+
+### Added (see rfcs/0001)
 
 - `consumes` block on `manifest.json` for **region producers**: tools that
   derive a new region from an existing one (for example digitizing a chart
@@ -34,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `"bottom-left"` accepted as a migration escape hatch that consumers convert
   on read). Previously the kind named the four fields but no units or
   origin, so producers could disagree without any consumer being able to tell.
+- `oip_version` bumped to `0.3` and RFC 0001 folded into `SPEC.md`:
+  the manifest section documents `consumes`, the regions section
+  documents `derived_from` and the inline `data` content kind.
+  Backwards-compatible: 0.1 and 0.2 producers validate unchanged.
+- The CLI's reported spec version is now single-sourced (#5): the
+  package parses `OIP_VERSION` from the bundled spec's title line and
+  reads `__version__` from package metadata, so `oip version` and
+  `oip spec` cannot drift from each other or from the spec file again.
 
 ## [0.2.0] — 2026-05-28
 
@@ -77,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reference implementations: PDF medallion + FMU producers (in
   [Anchor v2](https://github.com/Novia-RDI-Seafaring/anchor-kb-ui-RAG)).
 
-[Unreleased]: https://github.com/Novia-RDI-Seafaring/OIP/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Novia-RDI-Seafaring/OIP/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Novia-RDI-Seafaring/OIP/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Novia-RDI-Seafaring/OIP/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Novia-RDI-Seafaring/OIP/releases/tag/v0.1.0
